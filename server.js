@@ -8,6 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const ADMIN_PASSWORD = 'Gdolfwck22$$';
 
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -70,25 +71,26 @@ app.post('/api/inquiries', (req, res) => {
 
 // ============ PROTECTED ADMIN ROUTES ============
 
-// Middleware to check admin password
-function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const password = authHeader && authHeader.replace('Bearer ', '');
-  
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
+// Check password function
+function checkPassword(req) {
+  const auth = req.headers.authorization;
+  if (!auth) return false;
+  const pass = auth.replace('Bearer ', '').trim();
+  return pass === ADMIN_PASSWORD;
 }
 
 // Get all inquiries (protected)
-app.get('/api/admin/inquiries', requireAuth, (req, res) => {
+app.get('/api/admin/inquiries', (req, res) => {
+  if (!checkPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+  
   const db = readDB();
   res.json({ success: true, inquiries: db.inquiries });
 });
 
 // Get single inquiry (protected)
-app.get('/api/admin/inquiries/:id', requireAuth, (req, res) => {
+app.get('/api/admin/inquiries/:id', (req, res) => {
+  if (!checkPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+  
   const db = readDB();
   const inquiry = db.inquiries.find(i => i.id === req.params.id);
   if (!inquiry) return res.status(404).json({ error: 'Not found' });
@@ -96,7 +98,9 @@ app.get('/api/admin/inquiries/:id', requireAuth, (req, res) => {
 });
 
 // Update inquiry status (protected)
-app.patch('/api/admin/inquiries/:id', requireAuth, (req, res) => {
+app.patch('/api/admin/inquiries/:id', (req, res) => {
+  if (!checkPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+  
   const db = readDB();
   const index = db.inquiries.findIndex(i => i.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'Not found' });
@@ -113,7 +117,9 @@ app.patch('/api/admin/inquiries/:id', requireAuth, (req, res) => {
 });
 
 // Delete inquiry (protected)
-app.delete('/api/admin/inquiries/:id', requireAuth, (req, res) => {
+app.delete('/api/admin/inquiries/:id', (req, res) => {
+  if (!checkPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+  
   const db = readDB();
   const index = db.inquiries.findIndex(i => i.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'Not found' });
@@ -124,7 +130,9 @@ app.delete('/api/admin/inquiries/:id', requireAuth, (req, res) => {
 });
 
 // Get stats (protected)
-app.get('/api/admin/stats', requireAuth, (req, res) => {
+app.get('/api/admin/stats', (req, res) => {
+  if (!checkPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+  
   const db = readDB();
   const stats = {
     total: db.inquiries.length,
@@ -144,7 +152,7 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'login.html'));
 });
 
-// Serve admin dashboard (after login)
+// Serve admin dashboard
 app.get('/admin/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'dashboard.html'));
 });
@@ -159,4 +167,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
-      
+         
